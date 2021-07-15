@@ -16,6 +16,12 @@
             <artifactId>jgroups</artifactId>
             <version>3.6.4.Final</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20210307</version>
+        </dependency>
     </dependencies>
 </project>
 
