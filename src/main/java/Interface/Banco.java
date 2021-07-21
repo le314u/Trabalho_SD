@@ -72,10 +72,10 @@ public class Banco {
                     showMenuTransferencia();
                     break;
                 case 2:
-                    showMenuExtrato();
+//                    showMenuExtrato();
                     break;
                 case 3:
-                    showMenuConsulta();
+//                    showMenuConsulta();
                     break;
 
             }
