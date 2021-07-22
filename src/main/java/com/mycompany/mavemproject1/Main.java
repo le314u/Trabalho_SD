@@ -15,7 +15,11 @@ public class Main {
     public static void main(String[] args) {
 
         Banco banco = new Banco();
-        debug(banco);
+        //debug(banco);
+        banco = banco.loadSerializable();
+
+
+
         CLI view = new CLI(banco);
 
     }

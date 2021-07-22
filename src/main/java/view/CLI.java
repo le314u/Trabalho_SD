@@ -1,5 +1,6 @@
 package view;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
 
@@ -29,8 +30,7 @@ public class CLI {
             switch (option) {
                 case 1:
                     JSONObject cadastro = showMenuCadastro();
-                    //cadastrar no banco
-
+                    this.banco.CriarConta(cadastro.getString("nome"), cadastro.getString("cpf"), cadastro.getString("senha"));
                     break;
                 case 2:
                     JSONObject usuario = showMenuLogin();
@@ -196,8 +196,9 @@ public class CLI {
         in.nextLine();
     }
 
-    public void clear() {
-        //Implementar para limpar a tela
+    public void clear () {
+        //Limpa a tela no windows, no linux e no MacOS
+
     }
 
 }

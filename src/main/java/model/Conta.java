@@ -1,18 +1,22 @@
 package model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Conta {
+public class Conta implements Serializable {
 
     String cpf = "";
     String nome = "";
     String senha = "";
     Double saldo = 1000.0;
 
+    private static final long serialVersionUID = 1L;
+
     List<Operacao> historico = new ArrayList<Operacao>();
 
     public Conta(String nome, String cpf, String senha){
+        super();
         this.nome = nome;
         this.cpf = cpf;
         this.senha = senha;
@@ -37,6 +41,8 @@ public class Conta {
         return this.historico;
 
     }
+
+
 
     public void transferencia(Operacao operacao){
 

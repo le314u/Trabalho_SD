@@ -4,12 +4,16 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class Operacao {
+import java.io.Serializable;
+
+public class Operacao implements Serializable{
 
     Conta origem;
     Conta destino;
     Double valor;
     String data;
+
+    private static final long serialVersionUID = 1L;
 
     public Operacao(Conta origem, Conta destino, Double valor){
         this.origem = origem;
@@ -30,6 +34,7 @@ public class Operacao {
         Date date = new Date();
         return dateFormat.format(date);
     }
+
 
     @Override
     public String toString() {
