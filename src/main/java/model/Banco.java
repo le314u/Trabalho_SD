@@ -1,6 +1,5 @@
 package model;
 
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,8 +13,8 @@ public class Banco implements Serializable {
 
     }
 
-
-    public Conta CriarConta(String nome, String cpf, String senha){
+    public boolean verificaCpf(String cpf){
+        // percorre as contas
 
         boolean emUso = false;
 
@@ -25,14 +24,33 @@ public class Banco implements Serializable {
                 break;
             }
         }
-        if(!emUso){
-            Conta conta = new Conta(nome, cpf, senha);
-            contas.add(conta);
-            this.saveSerializable();
-            return conta;
-        } else {
-            return null;
+
+        return emUso;
+    }
+
+    public Conta getConta(String cpf){
+
+        for (Conta conta: contas) {
+            if(conta.cpf.equals(cpf)){
+                return conta;
+            }
         }
+        return null;
+    }
+
+    public Double getSaldo(String cpf){
+        return this.getConta(cpf).getSaldo();
+    }
+
+    public List<Operacao> getHistorico(String cpf){
+        return this.getConta(cpf).getHistorico();
+    }
+
+    public Conta CriarConta(String nome, String cpf, String senha){
+
+        Conta conta = new Conta(nome, cpf, senha);
+        contas.add(conta);
+        return conta;
 
     }
 
@@ -47,28 +65,16 @@ public class Banco implements Serializable {
         return contas;
     }
 
-    public Conta getConta(String cpf){
+    public Operacao transferencia(String origem, String destino, Double valor){
 
-        for (Conta conta: contas) {
-            if(conta.cpf.equals(cpf)){
-                return conta;
-            }
-        }
-        return null;
-    }
+        Conta out = this.getConta(origem);
+        Conta in = this.getConta(destino);
 
-    public boolean transferencia(Conta origem, String cpf, Double valor){
-        if(origem.saldo - valor < 0){
-            return false;
-        }
+        Operacao operacao = new Operacao(out, in, valor);
+        out.transferencia(operacao);
+        in.transferencia(operacao);
 
-        Conta destino = this.getConta(cpf);
-        Operacao operacao = new Operacao(origem, destino, valor);
-        origem.transferencia(operacao);
-        destino.transferencia(operacao);
-        this.saveSerializable();
-
-        return true;
+        return operacao;
     }
 
     public boolean autenticacao(String cpf, String senha){
