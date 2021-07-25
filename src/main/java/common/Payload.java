@@ -2,7 +2,9 @@ package common;
 
 import org.json.JSONObject;
 
-public class Payload {
+import java.io.Serializable;
+
+public class Payload implements Serializable {
 
     JSONObject json;
     String func;
@@ -51,4 +53,34 @@ public class Payload {
     public void setCoordenador(boolean coordenador) {
         this.coordenador = coordenador;
     }
+
+    @Override
+    public String toString() {
+        return new StringBuffer("json : ").append(this.json)
+                .append("func : ").append(this.func)
+                .append("channel : ").append(this.channel)
+                .append("coordenador : ").append(this.coordenador).toString();
+    }
+
+//    @Override
+//    public String toString() {
+//        return new StringBuffer(" Street : ")
+//                .append(this.street)
+//                .append(" Country : ")
+//                .append(this.country).toString();
+//    }
+
+
+//    @Override
+//    public String toString() {
+//        return "Payload{" +
+//                "json=" + json.toString() +
+//                ", func='" + func + '\'' +
+//                ", channel='" + channel + '\'' +
+//                ", coordenador=" + coordenador +
+//                '}';
+//    }
+
+
+
 }
