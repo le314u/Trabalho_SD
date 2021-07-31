@@ -122,7 +122,6 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
         return primeiroMembro;
     }
 
-
     private void eventLoop() {
 
         while (true) {
@@ -183,7 +182,6 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
     }
 
     public String typeFunc(String func) {
-
         String leitura[] = {"verificaCpf", "buscaConta", "saldo", "extrato", "pesquisa"};
         String escrita[] = {"cadastro", "transferencia"};
 
@@ -343,7 +341,6 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
         return respList;
     }
 
-
     private RspList enviaAnycast(MessageDispatcher despachante, Collection<Address> subgrupo, Object conteudo) throws Exception {
 
 
@@ -358,7 +355,6 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
 
         return respList;
     }
-
 
     private RspList enviaUnicast(MessageDispatcher despachante, Address destino, Object conteudo) throws Exception {
 
@@ -375,7 +371,6 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
 
         return respList;
     }
-
 
     public static void main(String[] args) throws Exception {
         new ConnectModel().start();

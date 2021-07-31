@@ -34,6 +34,11 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
     Integer balanceador;
 
     public ConnectView() {
+        try {
+            this.start();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
 
     }
 
@@ -96,9 +101,7 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
         if (getCoordenador(canal).equals(meuEndereco)) {
             return true;
         }
-
         return false;
-
     }
 
     public Address getCoordenador(Channel canal) {
@@ -180,7 +183,7 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
         }
     }
 
-    public void viewAccepted(View new_view) {
+    public void viewAccepted(EngineView new_view) {
         System.out.println(new_view);
 
         try{
@@ -257,11 +260,6 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
         RspList respList = despachante.castMessage(subgrupo, mensagem, opcoes); //envia o UNICAST
 
         return respList;
-    }
-
-
-    public static void main(String[] args) throws Exception {
-        new ConnectView().start();
     }
 
 }
