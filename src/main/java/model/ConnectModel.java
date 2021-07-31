@@ -59,18 +59,24 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
         channelModel.close();
     }
 
-    public void newCoordenador() throws Exception {
+    public void newCoordenador() {
 
-        // Instanciando o coordenador
-        if (souCoordenador() && channelController == null) {
+        try{
+            // Instanciando o coordenador
+            if (souCoordenador(channelModel) && channelController == null) {
 
-            channelController = new JChannel("sequencer.xml");
-            channelController.setReceiver(this);
-            despachanteController = new MessageDispatcher(channelController, this, this, this);
-            channelController.connect("control");
-            setCoordenador();
-            //channelController.close();
+                channelController = new JChannel("sequencer.xml");
+                channelController.setReceiver(this);
+                despachanteController = new MessageDispatcher(channelController, this, this, this);
+                channelController.connect("control");
+                setCoordenador();
+                //channelController.close();
+            }
+        } catch (Exception e) {
+            System.out.println("Erro ao definir um novo coordenador");
+            e.printStackTrace();
         }
+
 
     }
 
@@ -78,33 +84,30 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
 
         // Apenas o coordenador se apresenta para o controler
         // E somente quando houver uma mudança de coordenador
-        lastCoordenador = getCoordenador();
+        lastCoordenador = getCoordenador(channelModel);
         JSONObject json = new JSONObject();
         json.put("coordenador", channelController.getAddress());
-        Payload conteudo = new Payload(json, "newCoordenador", "model", false);
+        Payload conteudo = new Payload(json, "newCoordenador", "model", true);
 
         try {
-            System.out.println("Enviando mensagem");
-            RspList resposta = enviaMulticast(despachanteController, conteudo);
-            Object aux = resposta.getResults();
-            Object aux2 = resposta.getFirst();
-            System.out.println(aux);
-            System.out.println(aux2);
-        } catch (Exception e) {
+            Address cluster = null;
+            Message mensagem = new Message(null, null, conteudo.toString());
+            channelController.send(mensagem);
+
+        } catch (Exception e){
             e.printStackTrace();
-            System.out.println("Erro ao fazer multicast ao informor novo coordenador");
         }
 
     }
 
     // Verifica se sou o coordenador
-    public boolean souCoordenador() {
+    public boolean souCoordenador(Channel canal) {
 
         // Pega o meu endereço
-        Address meuEndereco = channelModel.getAddress();
+        Address meuEndereco = canal.getAddress();
 
         // verifica se sou coordenador
-        if (getCoordenador().equals(meuEndereco)) {
+        if (getCoordenador(canal).equals(meuEndereco)) {
             return true;
         }
 
@@ -112,8 +115,8 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
 
     }
 
-    public Address getCoordenador() {
-        Vector<Address> cluster = new Vector<Address>(channelModel.getView().getMembers()); // CUIDADO: o conteúdo do Vector poderá ficar desatualizado (ex.: se algum membro sair ou entrar na View)
+    public Address getCoordenador(Channel canal) {
+        Vector<Address> cluster = new Vector<Address>(canal.getView().getMembers()); // CUIDADO: o conteúdo do Vector poderá ficar desatualizado (ex.: se algum membro sair ou entrar na View)
         Address primeiroMembro = cluster.elementAt(0);  //OBS.: 0 a N-1
 
         return primeiroMembro;
@@ -200,6 +203,71 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
 
         if (pergunta.isCoordenador()) {
 
+            switch (pergunta.getFunc()) {
+                case "verificaCpf":
+                    // Retorna se existe uma conta com o cpf ou nao
+                    boolean isUsed = this.banco.verificaCpf(pergunta.getJson().getString("cpf"));
+                    JSONObject retornoCpf = new JSONObject().put("cpf", isUsed);
+                    return new Payload(retornoCpf, "verificaCpf", "model", souCoordenador(channelModel));
+
+                case "buscaConta":
+                    // Retorna a conta com o cpf tal
+                    Conta conta = this.banco.getConta(pergunta.getJson().getString("cpf"));
+                    JSONObject retornoConta = new JSONObject().put("cpf", conta.toString());
+                    return new Payload(retornoConta, "buscaConta", "model", souCoordenador(channelModel));
+
+                case "saldo":
+                    // Retorna o saldo da conta X
+                    Double saldo = this.banco.getSaldo(pergunta.getJson().getString("cpf"));
+                    JSONObject retornoSaldo = new JSONObject().put("saldo", saldo);
+                    return new Payload(retornoSaldo, "saldo", "model", souCoordenador(channelModel));
+
+                case "extrato":
+                    // Retorna o historico da conta X
+                    String extrato = "";
+                    List<Operacao> historico = this.banco.getHistorico(pergunta.getJson().getString("cpf"));
+                    for (Operacao operacao : historico) {
+                        extrato = extrato.concat(operacao.toString());
+                    }
+                    JSONObject retornoExtrato = new JSONObject().put("extrato", extrato);
+                    return new Payload(retornoExtrato, "extrato", "model", souCoordenador(channelModel));
+
+                case "cadastro":
+
+                    JSONObject json = pergunta.getJson();
+                    Conta newConta = this.banco.CriarConta(
+                            json.getString("nome"),
+                            json.getString("cpf"),
+                            json.getString("senha")
+                    );
+
+                    JSONObject retornoNewConta = new JSONObject().put("cadastro", newConta.toString());
+                    salvar();
+                    return new Payload(retornoNewConta, "cadastro", "model", souCoordenador(channelModel));
+
+                case "transferencia":
+                    JSONObject json2 = pergunta.getJson();
+
+                    Operacao op = this.banco.transferencia(
+                            json2.getString("origemCpf"),
+                            json2.getString("destinoCpf"),
+                            json2.getDouble("valor"));
+
+                    JSONObject retornoOperacao = new JSONObject().put("transferencia", op.toString());
+                    salvar();
+                    return new Payload(retornoOperacao, "transferencia", "model", souCoordenador(channelModel));
+
+                case "pesquisa":
+                    break;
+                default:
+                    System.out.println("DEFAULT");
+                    return new Payload(null, "invalido", "model", souCoordenador(channelModel));
+            }
+
+            ///
+
+        } else {
+
             if (typeFunc(pergunta.getFunc()).equals("leitura")) {
                 // Envia para um
                 Address membro = pickMember();
@@ -217,100 +285,53 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
                 // Exibe msg de erro
                 System.out.println("Erro");
             }
-            return new Payload(null, "invalido", "control", false);
-        } else {
-            //
-            switch (pergunta.getFunc()) {
-                case "verificaCpf":
-                    // Retorna se existe uma conta com o cpf ou nao
-                    boolean isUsed = this.banco.verificaCpf(pergunta.getJson().getString("cpf"));
-                    JSONObject retornoCpf = new JSONObject().put("cpf", isUsed);
-                    return new Payload(retornoCpf, "verificaCpf", "model", true);
-
-                case "buscaConta":
-                    // Retorna a conta com o cpf tal
-                    Conta conta = this.banco.getConta(pergunta.getJson().getString("cpf"));
-                    JSONObject retornoConta = new JSONObject().put("cpf", conta.toString());
-                    return new Payload(retornoConta, "buscaConta", "model", true);
-
-                case "saldo":
-                    // Retorna o saldo da conta X
-                    Double saldo = this.banco.getSaldo(pergunta.getJson().getString("cpf"));
-                    JSONObject retornoSaldo = new JSONObject().put("saldo", saldo);
-                    return new Payload(retornoSaldo, "saldo", "model", true);
-
-                case "extrato":
-                    // Retorna o historico da conta X
-                    String extrato = "";
-                    List<Operacao> historico = this.banco.getHistorico(pergunta.getJson().getString("cpf"));
-                    for (Operacao operacao : historico) {
-                        extrato = extrato.concat(operacao.toString());
-                    }
-                    JSONObject retornoExtrato = new JSONObject().put("extrato", extrato);
-                    return new Payload(retornoExtrato, "extrato", "model", true);
-
-                case "cadastro":
-
-                    JSONObject json = pergunta.getJson();
-                    Conta newConta = this.banco.CriarConta(
-                            json.getString("nome"),
-                            json.getString("cpf"),
-                            json.getString("senha")
-                    );
-
-                    JSONObject retornoNewConta = new JSONObject().put("cadastro", newConta.toString());
-                    salvar();
-                    return new Payload(retornoNewConta, "cadastro", "model", true);
-
-                case "transferencia":
-                    JSONObject json2 = pergunta.getJson();
-
-                    Operacao op = this.banco.transferencia(
-                            json2.getString("origemCpf"),
-                            json2.getString("destinoCpf"),
-                            json2.getDouble("valor"));
-
-                    JSONObject retornoOperacao = new JSONObject().put("transferencia", op.toString());
-                    salvar();
-                    return new Payload(retornoOperacao, "transferencia", "model", true);
-
-                case "pesquisa":
-                    break;
-                default:
-                    System.out.println("DEFAULT");
-                    return new Payload(null, "invalido", "model", true);
-            }
+            return new Payload(null, "invalido", "control", souCoordenador(channelModel));
 
         }
-        return new Payload(null, "invalido", "model", false);
+        return new Payload(null, "invalido", "model", souCoordenador(channelModel));
     }
 
     public void receive(Message msg) {
+
+
 
     }
 
     public void viewAccepted(View new_view) {
         System.out.println(new_view);
+        try{
+            if(souCoordenador(channelController)){
+                System.out.println("Tenho que alterar o coordenador");
+                if(channelController.getView().getMembers().size() > 1){
+                    System.out.println("Saio");
+                    channelController.close();
+                    channelController = null;
+                    newCoordenador();
+                    System.out.println(" Entro denovo");
+                }
+            }
+        } catch(Exception e){
+            System.out.println("Exception");
+        }
+
         // Apenas o coordenador se apresenta para o controler
         // E somente quando houver uma mudança de coordenador
-        if (souCoordenador() && (!getCoordenador().equals(lastCoordenador)) && channelController == null) {
+        if (souCoordenador(channelModel) && (!getCoordenador(channelModel).equals(lastCoordenador)) && channelController == null) {
 
-            try {
-                newCoordenador();
-            } catch (Exception e) {
-                System.out.println("Erro ao definir um novo coordenador");
-                e.printStackTrace();
-            }
+            newCoordenador();
 
         }
-        lastCoordenador = getCoordenador();
+        lastCoordenador = getCoordenador(channelModel);
     }
 
+    public void aux(){
+
+    }
 
     private RspList enviaMulticast(MessageDispatcher despachante, Payload conteudo) throws Exception {
         System.out.println("\nENVIEI a pergunta: " + conteudo);
         Address cluster = null; //OBS.: não definir um destinatário significa enviar a TODOS os membros do cluster
-        Message mensagem = new Message(cluster, conteudo);
+        Message mensagem = new Message(cluster, conteudo.toString());
         //mensagem.getSrc()
 
         RequestOptions opcoes = new RequestOptions();

@@ -1,6 +1,5 @@
-package control;
+package view;
 
-import org.json.JSONObject;
 import common.Payload;
 import model.Banco;
 import org.jgroups.*;
@@ -9,11 +8,12 @@ import org.jgroups.blocks.RequestHandler;
 import org.jgroups.blocks.RequestOptions;
 import org.jgroups.blocks.ResponseMode;
 import org.jgroups.util.RspList;
+import org.json.JSONObject;
 
 import java.util.Collection;
 import java.util.Vector;
 
-public class ConnectControl extends ReceiverAdapter implements RequestHandler {
+public class ConnectView extends ReceiverAdapter implements RequestHandler {
 
     // Cria os canais
     JChannel channelController;
@@ -33,7 +33,7 @@ public class ConnectControl extends ReceiverAdapter implements RequestHandler {
     // Variavel usada para escolher um membro do cluster
     Integer balanceador;
 
-    public ConnectControl() {
+    public ConnectView() {
 
     }
 
@@ -261,7 +261,7 @@ public class ConnectControl extends ReceiverAdapter implements RequestHandler {
 
 
     public static void main(String[] args) throws Exception {
-        new ConnectControl().start();
+        new ConnectView().start();
     }
 
 }

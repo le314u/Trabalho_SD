@@ -9,14 +9,31 @@ public class Payload implements Serializable {
     JSONObject json;
     String func;
     String channel;
-    boolean coordenador;
+    boolean coordenador; // Quem esta enviando o payload
 
     public Payload(){
 
     }
 
+    public Payload(String payloadString){
+        try{
+            JSONObject json = new JSONObject(payloadString);
+            this.func = json.getString("func");
+            this.channel = json.getString("channel");
+            this.coordenador = json.getBoolean("coordenador");
+            this.json = json.getJSONObject("json");
+        } catch (Exception e){
+            System.out.println("Entrou no catch do payload (ERRO A CORRIGIR)");
+        }
+
+    }
+
     public Payload(JSONObject json, String func, String channel, boolean coordenador){
-        this.json = json;
+        if (json == null){
+            this.json = new JSONObject();
+        } else {
+            this.json = json;
+        }
         this.func = func;
         this.channel = channel;
         this.coordenador = coordenador;
@@ -54,13 +71,7 @@ public class Payload implements Serializable {
         this.coordenador = coordenador;
     }
 
-    @Override
-    public String toString() {
-        return new StringBuffer("json : ").append(this.json)
-                .append("func : ").append(this.func)
-                .append("channel : ").append(this.channel)
-                .append("coordenador : ").append(this.coordenador).toString();
-    }
+
 
 //    @Override
 //    public String toString() {
@@ -71,15 +82,15 @@ public class Payload implements Serializable {
 //    }
 
 
-//    @Override
-//    public String toString() {
-//        return "Payload{" +
-//                "json=" + json.toString() +
-//                ", func='" + func + '\'' +
-//                ", channel='" + channel + '\'' +
-//                ", coordenador=" + coordenador +
-//                '}';
-//    }
+    @Override
+    public String toString() {
+        return "{" +
+                "json:" + json.toString() +
+                ", func:'" + func + '\'' +
+                ", channel:'" + channel + '\'' +
+                ", coordenador:" + coordenador +
+                '}';
+    }
 
 
 
