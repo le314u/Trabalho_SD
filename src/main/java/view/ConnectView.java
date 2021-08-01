@@ -27,12 +27,6 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
     Address lastCoordenador;
     Address acessPoint;
 
-    // Banco de dados
-    Banco banco;
-
-    // Variavel usada para escolher um membro do cluster
-    Integer balanceador;
-
     public ConnectView() {
         try {
             this.start();
@@ -44,27 +38,25 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
 
     private void start() throws Exception {
 
-        balanceador = 0;
-
         // Instancia o canal de comunicação e os integrantes do grupo
-        channelController = new JChannel("sequencer.xml");
-        channelController.setReceiver(this);
-        despachanteController = new MessageDispatcher(channelController, this, this, this);
-        channelController.connect("control");
+        channelView = new JChannel("sequencer.xml");
+        channelView.setReceiver(this);
+        despachanteView = new MessageDispatcher(channelView, this, this, this);
+        channelView.connect("view");
 
         eventLoop();
-        channelController.close();
+        channelView.close();
     }
 
     public void newCoordenador() throws Exception {
 
         // Instanciando o coordenador
-        if (souCoordenador(channelController) && channelView == null) {
+        if (souCoordenador(channelView) && channelController == null) {
 
-            channelView = new JChannel("sequencer.xml");
-            channelView.setReceiver(this);
-            despachanteView = new MessageDispatcher(channelView, this, this, this);
-            channelView.connect("view");
+            channelController = new JChannel("sequencer.xml");
+            channelController.setReceiver(this);
+            despachanteController = new MessageDispatcher(channelController, this, this, this);
+            channelController.connect("control");
             setCoordenador();
             //channelController.close();
         }
@@ -75,10 +67,10 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
 
         // Apenas o coordenador se apresenta para o controler
         // E somente quando houver uma mudança de coordenador
-        lastCoordenador = getCoordenador(channelController);
+        lastCoordenador = getCoordenador(channelView);
         JSONObject json = new JSONObject();
         json.put("coordenador", channelView.getAddress());
-        Payload conteudo = new Payload(json, "newCoordenador", "control", false);
+        Payload conteudo = new Payload(json, "newCoordenador", "view", false);
 
         try {
             Address cluster = null;
@@ -124,26 +116,6 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
 
     }
 
-    // A cada iteração escolhe um membro que não seja o coordenador
-    public Address pickMember() {
-        int qtdMembros = channelController.getView().size() - 1;
-        balanceador++;
-        int escolhido = balanceador % qtdMembros;
-        return channelController.getView().getMembers().get(escolhido + 1);
-    }
-
-//    public String typeFunc(String func) {
-//
-//        String leitura[] = {"verificaCpf", "buscaConta", "saldo", "extrato", "pesquisa"};
-//        String escrita[] = {"cadastro", "transferencia"};
-//
-//        if (Arrays.asList(leitura).contains(func)) {
-//            return "leitura";
-//        } else if (Arrays.asList(escrita).contains(func)) {
-//            return "escrita";
-//        } else return "erro";
-//
-//    }
 
     public void handleControl(Message msg){
         // quem é coordenador
@@ -178,11 +150,16 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
         // fixa o ponto de acesso para o outro canal
         Payload pergunta = new Payload(msg.getObject().toString());
         if (pergunta.getFunc().equals("newCoordenador")) {
-            acessPoint = msg.getSrc();
+            if(pergunta.getChannel().equals("control")){
+                acessPoint = msg.getSrc();
+            } else if (pergunta.getChannel().equals("view")){
+                lastCoordenador = msg.getSrc();
+            }
 
         }
     }
 
+    //// ALTERAR A VIEW ?
     public void viewAccepted(EngineView new_view) {
         System.out.println(new_view);
 
