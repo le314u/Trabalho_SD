@@ -13,7 +13,7 @@ public class EngineView {
     ConnectView connect;
 
     public EngineView() {
-        this.connect = new ConnectView();
+        //this.connect = new ConnectView();
         this.runTime();
     }
 
@@ -52,7 +52,6 @@ public class EngineView {
         }
     }
 
-
     public void Funcionalidades(Integer option) {
         switch (option) {
             case 1://Transferência
@@ -70,14 +69,15 @@ public class EngineView {
                 // Pesquisa
                 // Pega Dados
                 // Faz a pesquisa
-                JSONObject extrato = menuIO.getTransferencia();
-                Payload pExtrato = new Payload(extrato, "extrato","view",true);
+                JSONObject aux = null;
+                menuIO.getExtrato(aux);
+                Payload pExtrato = new Payload(null, "extrato","view",true);
                 //envia mensagem do extrato
                 //tenta mostrar o extrato
                 //showMenuExtrato();
                 break;
             case 3://Consulta
-                JSONObject consulta = menuIO.getTransferencia();
+                JSONObject consulta = menuIO.getPesquisa();
                 Payload pConsulta = new Payload(consulta, "extrato","view",true);
                 //envia mensagem de consulta
                 //menuIO.menuConsulta();
@@ -100,17 +100,8 @@ public class EngineView {
         return !this.token.equals("");
     }
 
-    private void showMenuExtrato(){
-        List<Operacao> historico = this.contaLogada.getHistorico();
-        int tamanho = historico.size();
-
-        if(tamanho == 0){
-            System.out.println("A conta não possui movimentação.");
-        } else {
-            for(int i=tamanho - 1; i >= 0; i--) {
-                System.out.println(historico.get(i));
-            }
-        }
+    public static void main(String[] args) throws Exception {
+        new EngineView();
     }
 
 }

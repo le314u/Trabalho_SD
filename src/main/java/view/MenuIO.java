@@ -7,12 +7,10 @@ import org.json.JSONObject;
 public class MenuIO {
 
 
-    Scanner in;
+    Scanner in = new Scanner(System.in);
 
     public MenuIO() {
-        Scanner in = new Scanner(System.in);
     }
-
 
     public int optInicial() {
         int option = 0;
@@ -22,26 +20,21 @@ public class MenuIO {
             // Mostra o menu
             System.out.println("Digite 1 - Para criar uma conta");
             System.out.println("Digite 2 - Para entrar em uma conta");
-            // Pega a opçõ do menu
-            try {
-                option = getOption();
-            } catch (Exception e) {
-                option = 0;
-            }
+            option = getOption();
         }
         return option;
     }
 
     public int optFuncionalidades() {
-        int option = -1;
-        while (option != 0) {
+        int option = 0;
+        while (option == 0) {
             //Limpa o menu
             this.clear();
             // Mostra o menu
             System.out.println("Digite 1 - Transferência:");
             System.out.println("Digite 2 - Extrato:");
             System.out.println("Digite 3 - Consulta:");
-            System.out.println("Digite 0 - sair:");
+            //System.out.println("Digite 0 - sair:");
             // Pega a opções do menu
             try {
                 option = getOption();
@@ -78,7 +71,6 @@ public class MenuIO {
         return retorno;
     }
 
-
     // Depende da pesquisa
     public JSONObject getTransferencia(JSONObject data) {
         //Consulta nas contas
@@ -97,6 +89,11 @@ public class MenuIO {
         JSONObject result = new JSONObject();
         result.put("nome", nome);
         return result;
+    }
+
+    public void getExtrato(JSONObject data) {
+        // Percorre todo o extrado
+        System.out.println("Implementar: ");
     }
 
     public void showTransferencia(Boolean resp){
@@ -123,7 +120,6 @@ public class MenuIO {
         }
     }
 
-
     public void showConsulta(JSONObject extrato){
 
     }
@@ -139,7 +135,11 @@ public class MenuIO {
     }
 
     private Integer getOption() {
-        return Integer.parseInt(in.nextLine());
+        try {
+            return Integer.parseInt(in.nextLine());
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private String getInput() {
@@ -153,10 +153,6 @@ public class MenuIO {
 
     private void clear () {
         //Limpa a tela no windows, no linux e no MacOS
-    }
-
-    public static void main(String[] args) throws Exception {
-        new MenuIO();
     }
 }
 
