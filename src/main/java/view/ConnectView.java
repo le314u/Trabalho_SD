@@ -1,6 +1,7 @@
 package view;
 
 import common.Payload;
+import control.ConnectControl;
 import model.Banco;
 import org.jgroups.*;
 import org.jgroups.blocks.MessageDispatcher;
@@ -10,22 +11,21 @@ import org.jgroups.blocks.ResponseMode;
 import org.jgroups.util.RspList;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Vector;
 
 public class ConnectView extends ReceiverAdapter implements RequestHandler {
 
     // Cria os canais
-    JChannel channelController;
     JChannel channelView;
 
     // Cria os despachantes para comunicar com cada canal
-    MessageDispatcher despachanteController;
     MessageDispatcher despachanteView;
 
     // Variavel auxiliar para ter controle se o coordenador foi mudado ou nao
-    Address lastCoordenador;
-    Address acessPoint;
+
+    Address accessPoint;
 
     public ConnectView() {
         try {
@@ -39,43 +39,27 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
     private void start() throws Exception {
 
         // Instancia o canal de comunicação e os integrantes do grupo
-        channelView = new JChannel("sequencer.xml");
+        channelView = new JChannel("C:/Users/Cliente/IdeaProjects/projeto/src/main/java/common/cast.xml");
         channelView.setReceiver(this);
         despachanteView = new MessageDispatcher(channelView, this, this, this);
         channelView.connect("view");
+
 
         eventLoop();
         channelView.close();
     }
 
-    public void newCoordenador() throws Exception {
+    // Informa a todos os membros do cluster que há um novo ponto de acesso
+    public void newAccessPoint() {
 
-        // Instanciando o coordenador
-        if (souCoordenador(channelView) && channelController == null) {
 
-            channelController = new JChannel("sequencer.xml");
-            channelController.setReceiver(this);
-            despachanteController = new MessageDispatcher(channelController, this, this, this);
-            channelController.connect("control");
-            setCoordenador();
-            //channelController.close();
-        }
-
-    }
-
-    public void setCoordenador() {
-
-        // Apenas o coordenador se apresenta para o controler
-        // E somente quando houver uma mudança de coordenador
-        lastCoordenador = getCoordenador(channelView);
         JSONObject json = new JSONObject();
-        json.put("coordenador", channelView.getAddress());
-        Payload conteudo = new Payload(json, "newCoordenador", "view", false);
+        json.put("accessPoint", this.accessPoint);
+        Payload conteudo = new Payload(json, "newAccessPoint", "view", souCoordenador(channelView));
 
         try {
-            Address cluster = null;
-            Message mensagem = new Message(null, null, conteudo.toString());
-            channelView.send(mensagem);
+
+            enviaMulticast(conteudo);
 
         } catch (Exception e){
             e.printStackTrace();
@@ -103,97 +87,95 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
         return primeiroMembro;
     }
 
-
     private void eventLoop() {
         // Verifica com os demais se eu ja estou atualizado TODO
-        while (true) {
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException ex) {
-                System.out.println ("Thread awaked");
-            }
-        }
+        EngineView engine = new EngineView(this);
+        engine.runTime();
 
     }
 
-
-    public void handleControl(Message msg){
-        // quem é coordenador
-        // Comando do coordenador
-    }
-
-    public void handleView(Message msg){
-
+    // Converte payload para string (usado no retorno das mensagens)
+    public String p2str(Payload p){
+        return p.toString();
     }
 
     // responde requisições recebidas
     public Object handle(Message msg) throws Exception {
 
-        // Extrai a mensagem e a converte para o tipo payload
-        //String a = msg.toString();
-        //ObjectInputStream b = (ObjectInputStream) msg.getObject();
         Payload pergunta = new Payload(msg.getObject().toString());
-        //Payload pergunta = (Payload) b.readObject();
+        // Caso o novo membro queira saber qual o ponto de acesso ao canal controler
+        if (souCoordenador(channelView) && pergunta.getFunc().equals("accessPoint")){
+            if(accessPoint != null){
+                JSONObject json = new JSONObject();
+                json.put("accessPoint", accessPoint);
+                return p2str(new Payload(json, "accessPoint", "view", souCoordenador(channelView)));
+            }
 
-        switch (pergunta.getChannel()){
-            case "control":
-                break;
-            case "view":
-                break;
         }
 
-        return new Payload(null, "invalido", "model", false);
+        return p2str(new Payload(null, "invalido", "view", souCoordenador(channelView)));
     }
 
     public void receive(Message msg) {
 
-        // fixa o ponto de acesso para o outro canal
+        // fixa o ponto de accesso para o outro canal
         Payload pergunta = new Payload(msg.getObject().toString());
         if (pergunta.getFunc().equals("newCoordenador")) {
             if(pergunta.getChannel().equals("control")){
-                acessPoint = msg.getSrc();
-            } else if (pergunta.getChannel().equals("view")){
-                lastCoordenador = msg.getSrc();
+                accessPoint = msg.getSrc();
+                newAccessPoint();
             }
 
+        } else if (pergunta.getFunc().equals("newAccessPoint")) {
+            String endereco = pergunta.getJson().getString("accessPoint");
+            saveAp(endereco);
+        }
+
+    }
+
+    // Recurso tecnico necessario
+    public void saveAp(String endereco){
+
+        for (Address membro : channelView.getView().getMembers()) {
+            if(membro.toString().equals(endereco)){
+                accessPoint = membro;
+            }
         }
     }
 
-    //// ALTERAR A VIEW ?
-    public void viewAccepted(EngineView new_view) {
-        System.out.println(new_view);
+    // Pergunta ao coordenador qual o ponto de acesso
+    public void getAccessPoint(){
 
-        try{
-            if(souCoordenador(channelView)){
-                System.out.println("Tenho que alterar o coordenador");
-                if(channelView.getView().getMembers().size() > 1){
-                    System.out.println("Saio");
-                    channelView.close();
-                    channelView = null;
-                    newCoordenador();
-                    System.out.println(" Entro denovo");
-                }
-            }
-        } catch(Exception e){
-            System.out.println("Exception");
-        }
-        // Apenas o coordenador se apresenta para o controler
-        // E somente quando houver uma mudança de coordenador
-        if (souCoordenador(channelController) && (!getCoordenador(channelController).equals(lastCoordenador)) && channelView == null) {
+        if (!souCoordenador(channelView) && accessPoint != null){
+            try{
 
-            try {
-                newCoordenador();
-            } catch (Exception e) {
-                System.out.println("Erro ao definir um novo coordenador");
+                Payload p = new Payload(null, "accessPoint", "view", souCoordenador(channelView));
+
+                Payload resultado = new Payload(sendCoordenador(p));
+
+                String endereco = resultado.getJson().getString("accessPoint");
+                saveAp(endereco);
+
+            } catch (Exception e){
                 e.printStackTrace();
             }
-
         }
-        lastCoordenador = getCoordenador(channelController);
+
+
     }
 
-    private RspList enviaMulticast(MessageDispatcher despachante, Payload conteudo) throws Exception {
-        System.out.println("\nENVIEI a pergunta: " + conteudo);
+    //// CONTINUAR ALTERANDO A VIEW ?
+    public void viewAccepted(View new_view) {
+
+        if (!souCoordenador(channelView) && channelView.getView().getMembers().size() > 1){
+            this.getAccessPoint();
+        }
+
+        System.out.println(new_view);
+    }
+
+    private RspList enviaMulticast(Payload conteudo) throws Exception {
+        MessageDispatcher despachante = despachanteView;
         Address cluster = null; //OBS.: não definir um destinatário significa enviar a TODOS os membros do cluster
         Message mensagem = new Message(cluster, conteudo.toString());
 
@@ -202,41 +184,66 @@ public class ConnectView extends ReceiverAdapter implements RequestHandler {
         opcoes.setAnycasting(false);
 
         RspList respList = despachante.castMessage(null, mensagem, opcoes); //envia o MULTICAST
-        System.out.println("==> Respostas do cluster ao MULTICAST:\n" + respList + "\n");
-        return respList;
-    }
-
-
-    private RspList enviaAnycast(MessageDispatcher despachante, Collection<Address> subgrupo, Object conteudo) throws Exception {
-
-
-        Message mensagem = new Message(null, conteudo); //apesar do endereço ser null, se as opcoes contiverem anycasting==true enviará somente aos destinos listados
-
-        RequestOptions opcoes = new RequestOptions();
-        opcoes.setMode(ResponseMode.GET_FIRST); // só ESPERA receber a primeira resposta do subgrupo (FIRST) // Outras opções: ALL, MAJORITY, NONE
-        opcoes.setAnycasting(true);
-
-        RspList respList = despachante.castMessage(subgrupo, mensagem, opcoes); //envia o ANYCAST
-
 
         return respList;
     }
 
 
-    private RspList enviaUnicast(MessageDispatcher despachante, Address destino, Object conteudo) throws Exception {
+//    private RspList enviaAnycast(MessageDispatcher despachante, Collection<Address> subgrupo, Object conteudo) throws Exception {
+//
+//
+//        Message mensagem = new Message(null, conteudo); //apesar do endereço ser null, se as opcoes contiverem anycasting==true enviará somente aos destinos listados
+//
+//        RequestOptions opcoes = new RequestOptions();
+//        opcoes.setMode(ResponseMode.GET_FIRST); // só ESPERA receber a primeira resposta do subgrupo (FIRST) // Outras opções: ALL, MAJORITY, NONE
+//        opcoes.setAnycasting(true);
+//
+//        RspList respList = despachante.castMessage(subgrupo, mensagem, opcoes); //envia o ANYCAST
+//
+//
+//        return respList;
+//    }
 
-        Message mensagem = new Message(destino, conteudo);
+    private String sendCoordenador(Payload conteudo) throws Exception {
+
+        MessageDispatcher despachante = despachanteView;
+        Address destino = getCoordenador(channelView);
+        Message mensagem = new Message(destino, conteudo.toString());
 
         RequestOptions opcoes = new RequestOptions();
         opcoes.setMode(ResponseMode.GET_FIRST); // ESPERA receber a resposta do destino // Outras opções: ALL, MAJORITY, FIRST, NONE
         // opcoes.setMode(ResponseMode.GET_NONE); // não ESPERA receber a resposta do destino // Outras opções: ALL, MAJORITY, FIRST
 
-        Vector<Address> subgrupo = new Vector<Address>();
-        subgrupo.add(destino);
+        return despachante.sendMessage(mensagem, opcoes); //envia o UNICAST
 
-        RspList respList = despachante.castMessage(subgrupo, mensagem, opcoes); //envia o UNICAST
 
-        return respList;
+    }
+
+    public String sendControl(Payload conteudo) throws Exception {
+
+        MessageDispatcher despachante = despachanteView;
+        getAccessPoint();
+
+        Address destino = accessPoint;
+        Message mensagem = new Message(destino, conteudo.toString());
+
+        RequestOptions opcoes = new RequestOptions();
+        opcoes.setMode(ResponseMode.GET_FIRST); // ESPERA receber a resposta do destino // Outras opções: ALL, MAJORITY, FIRST, NONE
+        // opcoes.setMode(ResponseMode.GET_NONE); // não ESPERA receber a resposta do destino // Outras opções: ALL, MAJORITY, FIRST
+
+        return despachante.sendMessage(mensagem, opcoes); //envia o UNICAST
+
+
+    }
+
+
+    public static void main(String[] args) {
+        try{
+            new ConnectView().start();
+        } catch(Exception e){
+            e.printStackTrace();
+        }
+
     }
 
 }

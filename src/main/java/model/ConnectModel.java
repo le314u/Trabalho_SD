@@ -182,7 +182,7 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
     }
 
     public String typeFunc(String func) {
-        String leitura[] = {"verificaCpf", "buscaConta", "saldo", "extrato", "pesquisa"};
+        String leitura[] = {"verificaCpf", "buscaConta", "saldo", "extrato", "pesquisa", "login"};
         String escrita[] = {"cadastro", "transferencia"};
 
         if (Arrays.asList(leitura).contains(func)) {
@@ -197,7 +197,7 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
     public Object handle(Message msg) throws Exception {
 
         // Extrai a mensagem e a converte para o tipo payload
-        Payload pergunta = (Payload) msg.getObject();
+        Payload pergunta = new Payload(msg.getObject().toString());
 
         if (pergunta.isCoordenador()) {
 
@@ -254,7 +254,9 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
                     JSONObject retornoOperacao = new JSONObject().put("transferencia", op.toString());
                     salvar();
                     return new Payload(retornoOperacao, "transferencia", "model", souCoordenador(channelModel));
+                case "login":
 
+                    break;
                 case "pesquisa":
                     break;
                 default:
@@ -299,13 +301,11 @@ public class ConnectModel extends ReceiverAdapter implements RequestHandler {
         System.out.println(new_view);
         try{
             if(souCoordenador(channelController)){
-                System.out.println("Tenho que alterar o coordenador");
                 if(channelController.getView().getMembers().size() > 1){
-                    System.out.println("Saio");
+                    System.out.println("Resete conexão");
                     channelController.close();
                     channelController = null;
                     newCoordenador();
-                    System.out.println(" Entro denovo");
                 }
             }
         } catch(Exception e){

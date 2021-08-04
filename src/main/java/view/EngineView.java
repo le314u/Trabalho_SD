@@ -12,9 +12,8 @@ public class EngineView {
     String token = "";
     ConnectView connect;
 
-    public EngineView() {
-        //this.connect = new ConnectView();
-        this.runTime();
+    public EngineView(ConnectView connect) {
+        this.connect = connect;
     }
 
     public void runTime() {
@@ -27,8 +26,14 @@ public class EngineView {
         switch (option) {
             case 1://criar uma conta
                 JSONObject cadastro = menuIO.getCadastro();
-                Payload pCadastro = new Payload(cadastro, "cadastro","view",true);
-                //Envia dados para criação de conta
+                Payload pCadastro = new Payload(cadastro, "cadastro","view",connect.souCoordenador(connect.channelView));
+
+                try{
+                    String resposta = connect.sendControl(pCadastro);
+                } catch (Exception e){
+                    System.out.println("Erro ao realizar cadastro");
+                }
+
                 // JGROUPS
                 // menu menu.showCadastro(RESPOSTA)
                 break;
@@ -100,8 +105,5 @@ public class EngineView {
         return !this.token.equals("");
     }
 
-    public static void main(String[] args) throws Exception {
-        new EngineView();
-    }
 
 }

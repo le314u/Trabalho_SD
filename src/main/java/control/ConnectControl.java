@@ -25,7 +25,7 @@ public class ConnectControl extends ReceiverAdapter implements RequestHandler {
 
     // Variavel auxiliar para ter controle se o coordenador foi mudado ou nao
     Address lastCoordenador;
-    Address acessPoint;
+    Address accessPoint;
 
     // Banco de dados
     Banco banco;
@@ -142,12 +142,35 @@ public class ConnectControl extends ReceiverAdapter implements RequestHandler {
 //
 //    }
 
-    public void handleControl(Message msg){
-        // quem é coordenador
-        // Comando do coordenador
+    public String handleControl(Payload pergunta){
+
+        Address destino = pickMember();
+        switch (pergunta.getFunc()){
+            case("cadastro"):
+                try{
+                    pergunta.setFunc("buscaConta");
+                    String resultado = sendModel(pergunta);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+                break;
+        }
+        try{
+            return sendModel(pergunta);
+        } catch (Exception e){
+            return p2str(new Payload(null, "invalido", "control", souCoordenador(channelController)));
+        }
     }
 
-    public void handleView(Message msg){
+    public String handleView(Payload pergunta){
+
+        getAccessPoint();
+        try{
+            pergunta.setChannel("control");
+            return this.sendCoordenador(pergunta);
+        } catch (Exception e){
+            return p2str(new Payload(null, "invalido", "control", souCoordenador(channelController)));
+        }
 
     }
 
@@ -162,36 +185,80 @@ public class ConnectControl extends ReceiverAdapter implements RequestHandler {
 
         switch (pergunta.getChannel()){
             case "control":
-                break;
+                return handleControl(pergunta);
             case "view":
-                break;
+                return handleView(pergunta);
         }
 
-        return new Payload(null, "invalido", "model", false);
+        return p2str(new Payload(null, "invalido", "model", false));
+    }
+
+    // Converte payload para string (usado no retorno das mensagens)
+    public String p2str(Payload p){
+        return p.toString();
+    }
+
+    // Recurso tecnico necessario
+    public void saveAp(String endereco){
+
+        for (Address membro : channelController.getView().getMembers()) {
+            if(membro.toString().equals(endereco)){
+                accessPoint = membro;
+            }
+        }
+    }
+
+    // Pergunta ao coordenador qual o ponto de acesso
+    public void getAccessPoint(){
+
+        if (!souCoordenador(channelController)){
+            try{
+
+                Payload p = new Payload(null, "accessPoint", "view", souCoordenador(channelView));
+
+                Payload resultado = new Payload(sendCoordenador(p));
+
+                String endereco = resultado.getJson().getString("accessPoint");
+                saveAp(endereco);
+
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+
+
     }
 
     public void receive(Message msg) {
 
-        // fixa o ponto de acesso para o outro canal
+        // fixa o ponto de accesso para o outro canal
         Payload pergunta = new Payload(msg.getObject().toString());
         if (pergunta.getFunc().equals("newCoordenador")) {
-            acessPoint = msg.getSrc();
+            accessPoint = msg.getSrc();
 
         }
     }
+    public String debug(View new_view){
+        if (channelController.getView().equals(new_view)){
+            Address meuEndereco = channelController.getAddress();
+            return "control -"+meuEndereco.toString();
+        } else if (channelView.getView().equals(new_view)){
+            Address meuEndereco = channelView.getAddress();
+            return "view -"+meuEndereco.toString();
+        }
+        return "Não sei";
+    }
 
     public void viewAccepted(View new_view) {
-        System.out.println(new_view);
+        System.out.println(debug(new_view) + new_view.toString());
 
         try{
             if(souCoordenador(channelView)){
-                System.out.println("Tenho que alterar o coordenador");
                 if(channelView.getView().getMembers().size() > 1){
-                    System.out.println("Saio");
+                    System.out.println("Resete conexão");
                     channelView.close();
                     channelView = null;
                     newCoordenador();
-                    System.out.println(" Entro denovo");
                 }
             }
         } catch(Exception e){
@@ -242,21 +309,37 @@ public class ConnectControl extends ReceiverAdapter implements RequestHandler {
         return respList;
     }
 
+    private String sendCoordenador(Payload conteudo) throws Exception {
 
-    private RspList enviaUnicast(MessageDispatcher despachante, Address destino, Object conteudo) throws Exception {
-
-        Message mensagem = new Message(destino, conteudo);
+        MessageDispatcher despachante = despachanteController;
+        Address destino = getCoordenador(channelController);
+        Message mensagem = new Message(destino, conteudo.toString());
 
         RequestOptions opcoes = new RequestOptions();
         opcoes.setMode(ResponseMode.GET_FIRST); // ESPERA receber a resposta do destino // Outras opções: ALL, MAJORITY, FIRST, NONE
         // opcoes.setMode(ResponseMode.GET_NONE); // não ESPERA receber a resposta do destino // Outras opções: ALL, MAJORITY, FIRST
 
-        Vector<Address> subgrupo = new Vector<Address>();
-        subgrupo.add(destino);
+        return despachante.sendMessage(mensagem, opcoes); //envia o UNICAST
 
-        RspList respList = despachante.castMessage(subgrupo, mensagem, opcoes); //envia o UNICAST
 
-        return respList;
+    }
+
+    public String sendModel(Payload conteudo) throws Exception {
+
+        MessageDispatcher despachante = despachanteController;
+        if (accessPoint == null){
+            getAccessPoint();
+        }
+        Address destino = accessPoint;
+        Message mensagem = new Message(destino, conteudo.toString());
+
+        RequestOptions opcoes = new RequestOptions();
+        opcoes.setMode(ResponseMode.GET_FIRST); // ESPERA receber a resposta do destino // Outras opções: ALL, MAJORITY, FIRST, NONE
+        // opcoes.setMode(ResponseMode.GET_NONE); // não ESPERA receber a resposta do destino // Outras opções: ALL, MAJORITY, FIRST
+
+        return despachante.sendMessage(mensagem, opcoes); //envia o UNICAST
+
+
     }
 
 
